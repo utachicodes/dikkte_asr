@@ -6,3 +6,7 @@ datasets
 gradio>=4.0
 numpy
 sounddevice
+evaluate>=0.4
+jiwer>=3.0
+huggingface_hub>=0.20
+pytest>=7.0
