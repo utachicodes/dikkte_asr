@@ -1,13 +1,14 @@
-<![CDATA[[![HuggingFace](https://img.shields.io/badge/%F0%9F%A4%97-Model_on_Hub-yellow)](https://huggingface.co/utachicodes/dikkte-wolof-asr)
-[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-blue.svg)](https://python.org)
+[![Model on HF](https://huggingface.co/datasets/huggingface/badges/resolve/main/model-on-hf-sm.svg)](https://huggingface.co/utachicodes/dikkte-wolof-asr)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
+[![Python 3.10+](https://img.shields.io/badge/Python-3.10+-3776AB?logo=python&logoColor=white)](https://python.org)
+[![Transformers](https://img.shields.io/badge/Transformers-4.40+-FF6F00?logo=huggingface)](https://huggingface.co/docs/transformers)
 [![Whisper](https://img.shields.io/badge/Base-whisper--small-orange)](https://huggingface.co/openai/whisper-small)
 
 # Dikkte ASR
 
-Wolof automatic speech recognition. Fine-tunes [Whisper small](https://huggingface.co/openai/whisper-small) with LoRA, merges the weights, and gives you a standard `transformers` model you can load in two lines.
+Wolof speech-to-text. Fine-tunes [Whisper small](https://huggingface.co/openai/whisper-small) with LoRA, merges the adapter, and gives you a standard `transformers` model you can load in two lines.
 
-Wolof is spoken by 10M+ people across Senegal, Gambia, and Mauritania — but barely has any open ASR tooling. This fixes that.
+Wolof is spoken by 10M+ people across Senegal, Gambia, and Mauritania — but barely has any open ASR tools. This project fixes that.
 
 ## Install
 
@@ -20,6 +21,10 @@ pip install -r requirements.txt
 ## Usage
 
 ### From HuggingFace (easiest)
+
+```bash
+pip install transformers torch torchaudio
+```
 
 ```python
 from transformers import pipeline
@@ -55,9 +60,9 @@ python wolof_stt.py
 # opens at http://127.0.0.1:7860
 ```
 
-Record from your mic, hit transcribe. Long audio gets chunked into 30s segments automatically.
+Record from your mic, hit transcribe. Long audio gets chunked into 30s segments.
 
-### From the raw LoRA adapter
+### Use the raw LoRA adapter
 
 If you want to apply the adapter yourself instead of using the merged model:
 
@@ -80,7 +85,7 @@ model = model.merge_and_unload()
 | Trainable params | 5.3M (2.1% of total) |
 | Dataset | [`alfaDF9/asr-wolof-dataset-processed-v1`](https://huggingface.co/datasets/alfaDF9/asr-wolof-dataset-processed-v1) |
 | Split | 10,380 train / 2,598 test |
-| Batch size | 16 effective (2 × 8 grad accum) |
+| Batch size | 16 effective (2 x 8 grad accum) |
 | LR | 1e-3 |
 | Epochs | 3 |
 | Loss | 4.21 → 0.67 |
@@ -88,13 +93,13 @@ model = model.merge_and_unload()
 | Hardware | RTX 3060 Laptop (6GB VRAM) |
 | Time | ~6 hours |
 
-### Retrain it yourself
+### Retrain
 
 ```bash
 python train_wolof.py
 ```
 
-Downloads the dataset (~3.2GB), trains LoRA on whisper-small, saves adapter to `./wolof-whisper-small-lora/`. Edit the config block at the top to change hyperparameters.
+Downloads the dataset (~3.2GB), trains LoRA on whisper-small, saves adapter to `./wolof-whisper-small-lora/`. Edit the config block at the top to change hyperparams.
 
 ### Evaluate
 
@@ -116,18 +121,18 @@ python push_to_hub.py --skip-eval         # skip WER computation
 
 | Metric | Value |
 |--------|-------|
-| WER | 57.68% |
-| CER | 37.17% |
+| **WER** | 57.68% |
+| **CER** | 37.17% |
 
-Evaluated on 500 samples from the test split. This is a first pass on whisper-small — there's room to improve with more data, longer training, or a bigger base model.
+Evaluated on 500 test samples. v1 on whisper-small — room to improve with more data, longer training, or a bigger base model.
 
-## Compared to
+## Other Wolof ASR models
 
-| Model | Params | VRAM needed | Notes |
-|-------|--------|-------------|-------|
+| Model | Params | VRAM | Notes |
+|-------|--------|------|-------|
 | [CAYTU/whosper-large-v2](https://huggingface.co/CAYTU/whosper-large-v2) | 1.5B | 12GB+ | LoRA on whisper-large-v2 |
 | [dofbi/wolof-asr](https://huggingface.co/dofbi/wolof-asr) | 244M | ~4GB | Full fine-tune, 12% WER reported |
-| [facebook/mms-1b-all](https://huggingface.co/facebook/mms-1b-all) | 1B | 8GB+ | Multilingual, Wolof adapter available |
+| [facebook/mms-1b-all](https://huggingface.co/facebook/mms-1b-all) | 1B | 8GB+ | Multilingual, Wolof adapter |
 | **dikkte** | **244M** | **~3GB** | **LoRA-merged whisper-small** |
 
 ## Files
@@ -151,4 +156,3 @@ MIT
 - [alfaDF9](https://huggingface.co/alfaDF9) — Wolof ASR dataset
 - [CAYTU / Seydou Diallo](https://huggingface.co/CAYTU) — whosper approach
 - [OpenAI](https://github.com/openai/whisper) — Whisper
-]]>
