@@ -1,0 +1,15 @@
+__pycache__/
+*.pyc
+*.pyo
+.env
+*.egg-info/
+dist/
+build/
+.claude/
+
+# Training checkpoints (large files)
+wolof-whisper-small-lora/checkpoint-*/
+
+# OS
+.DS_Store
+Thumbs.db
