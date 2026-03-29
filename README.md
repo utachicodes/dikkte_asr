@@ -1,32 +1,31 @@
-# Dikkte ASR - Wolof Speech Recognition
+# Dikkte ASR
 
-Dikkte is an automatic speech recognition (ASR) system for **Wolof**, a language spoken by over 10 million people across Senegal, Gambia, and Mauritania. It fine-tunes OpenAI's Whisper (small) using LoRA for efficient, high-quality Wolof transcription that runs on consumer hardware.
+Wolof speech recognition. Fine-tunes Whisper (small) with LoRA so it actually works for Wolof and runs on normal hardware.
 
-## Approach
+Wolof is spoken by 10M+ people across Senegal, Gambia, and Mauritania but has almost no ASR tooling. This project fixes that.
 
-- **Base model:** [openai/whisper-small](https://huggingface.co/openai/whisper-small) (244M params)
-- **Fine-tuning:** LoRA (Low-Rank Adaptation) via [PEFT](https://github.com/huggingface/peft) — only 5.3M trainable parameters (2.1% of the model)
-- **Dataset:** [alfaDF9/asr-wolof-dataset-processed-v1](https://huggingface.co/datasets/alfaDF9/asr-wolof-dataset-processed-v1) — 10,380 training / 2,598 test samples
-- **Inspired by:** [CAYTU/whosper-large-v2](https://huggingface.co/CAYTU/whosper-large-v2) — same LoRA technique, but targeting a smaller model that fits on 6GB VRAM GPUs
+## How it works
 
-## Training Details
+Takes `openai/whisper-small` (244M params) and applies LoRA adapters on the attention layers. Only 5.3M parameters are trained (2.1% of the model), keeping it fast and light. Trained on [alfaDF9/asr-wolof-dataset-processed-v1](https://huggingface.co/datasets/alfaDF9/asr-wolof-dataset-processed-v1) — about 10k Wolof audio samples.
 
-| Parameter | Value |
-|-----------|-------|
+Inspired by [CAYTU/whosper-large-v2](https://huggingface.co/CAYTU/whosper-large-v2) which does the same thing on whisper-large-v2 but needs 12GB+ VRAM. This runs on a laptop GPU.
+
+## Training
+
+| | |
+|---|---|
 | Base model | `openai/whisper-small` |
-| LoRA rank | 32 |
-| LoRA alpha | 64 |
-| Target modules | `q_proj`, `v_proj`, `k_proj`, `o_proj` |
-| Batch size | 2 (x8 gradient accumulation = effective 16) |
+| LoRA rank / alpha | 32 / 64 |
+| Target modules | q_proj, v_proj, k_proj, o_proj |
+| Effective batch size | 16 (2 x 8 grad accum) |
 | Learning rate | 1e-3 |
 | Epochs | 3 |
-| Training loss | 4.21 &rarr; 0.67 |
-| Hardware | NVIDIA RTX 3060 Laptop (6GB VRAM) |
-| Training time | ~6 hours |
+| Loss | 4.21 → 0.67 |
+| Dataset | 10,380 train / 2,598 test |
+| GPU | RTX 3060 Laptop 6GB |
+| Time | ~6 hours |
 
-## Quick Start
-
-### Install
+## Setup
 
 ```bash
 git clone https://github.com/utachicodes/dikkte_asr.git
@@ -34,99 +33,74 @@ cd dikkte_asr
 pip install -r requirements.txt
 ```
 
-### Run the Web UI
+## Usage
+
+### Web UI
 
 ```bash
 python wolof_stt.py
 ```
 
-Opens a Gradio interface at `http://127.0.0.1:7860`:
-- Click the microphone to record Wolof speech (any duration)
-- Click stop — transcription runs automatically
-- Long recordings are chunked into 30-second segments
+Opens at `http://127.0.0.1:7860`. Click mic, speak Wolof, click stop. Long audio gets chunked into 30s segments automatically.
 
-### Transcribe in Python
+### Python
 
 ```python
 from transformers import WhisperForConditionalGeneration, WhisperProcessor
 from peft import PeftModel
-import torchaudio
-import torch
+import torchaudio, torch
 
-# Load model
 processor = WhisperProcessor.from_pretrained("openai/whisper-small")
-base_model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-small")
-model = PeftModel.from_pretrained(base_model, "./wolof-whisper-small-lora")
+base = WhisperForConditionalGeneration.from_pretrained("openai/whisper-small")
+model = PeftModel.from_pretrained(base, "./wolof-whisper-small-lora")
 model = model.merge_and_unload()
 model.eval()
 
-# Load audio
 waveform, sr = torchaudio.load("audio.wav")
 if sr != 16000:
     waveform = torchaudio.transforms.Resample(sr, 16000)(waveform)
 
-# Transcribe
 inputs = processor(waveform.squeeze().numpy(), sampling_rate=16000, return_tensors="pt")
 with torch.no_grad():
-    predicted_ids = model.generate(input_features=inputs.input_features)
-text = processor.batch_decode(predicted_ids, skip_special_tokens=True)[0]
-print(text)
+    ids = model.generate(input_features=inputs.input_features)
+print(processor.batch_decode(ids, skip_special_tokens=True)[0])
 ```
 
-## Train Your Own
-
-To fine-tune on additional Wolof data or adjust hyperparameters:
+## Retrain
 
 ```bash
 python train_wolof.py
 ```
 
-This downloads the dataset (~3.2GB), fine-tunes whisper-small with LoRA, and saves the adapter to `./wolof-whisper-small-lora`. The inference UI automatically picks it up on next run.
+Downloads the dataset (~3.2GB), trains, saves adapter to `./wolof-whisper-small-lora/`. Edit the config block at the top of the script to change hyperparameters or swap the base model.
 
-**Customize training** by editing the config at the top of `train_wolof.py`:
-
-```python
-BASE_MODEL = "openai/whisper-small"   # or whisper-base, whisper-medium
-BATCH_SIZE = 2                         # increase if you have more VRAM
-EPOCHS = 3
-LR = 1e-3
-LORA_R = 32
-```
-
-## Project Structure
+## Files
 
 ```
-dikkte_asr/
-  train_wolof.py              # LoRA fine-tuning script
-  wolof_stt.py                # Gradio web UI for live transcription
-  requirements.txt            # Python dependencies
-  wolof-whisper-small-lora/   # Fine-tuned LoRA adapter weights
-    adapter_model.safetensors # LoRA weights (~21MB)
-    adapter_config.json       # LoRA configuration
-    tokenizer.json            # Whisper tokenizer
-    ...
+train_wolof.py                         Training script
+wolof_stt.py                           Gradio web UI
+requirements.txt                       Dependencies
+wolof-whisper-small-lora/
+  adapter_model.safetensors            LoRA weights (~21MB)
+  adapter_config.json                  LoRA config
+  tokenizer.json + vocab.json + ...    Whisper tokenizer files
 ```
 
-## Why Dikkte?
+## Comparison
 
-Wolof is a low-resource language with limited ASR tooling. Existing options:
-
-| Model | Size | Approach |
-|-------|------|----------|
-| [CAYTU/whosper-large-v2](https://huggingface.co/CAYTU/whosper-large-v2) | 1.5B | LoRA on whisper-large-v2 (needs 12GB+ VRAM) |
-| [dofbi/wolof-asr](https://huggingface.co/dofbi/wolof-asr) | 244M | Full fine-tune of whisper-small (12% WER) |
-| [facebook/mms-1b-all](https://huggingface.co/facebook/mms-1b-all) | 1B | Multilingual wav2vec2 with Wolof adapter |
-| **Dikkte (this repo)** | **244M + 21MB adapter** | **LoRA on whisper-small (runs on 6GB VRAM)** |
-
-Dikkte brings whosper-level fine-tuning to consumer GPUs.
+| Model | Size | Notes |
+|-------|------|-------|
+| CAYTU/whosper-large-v2 | 1.5B | LoRA on whisper-large-v2, needs 12GB+ VRAM |
+| dofbi/wolof-asr | 244M | Full fine-tune, 12% WER reported |
+| facebook/mms-1b-all | 1B | Multilingual, Wolof adapter available |
+| **dikkte** | **244M + 21MB** | **LoRA on whisper-small, runs on 6GB VRAM** |
 
 ## License
 
 MIT
 
-## Acknowledgments
+## Credits
 
-- [alfaDF9](https://huggingface.co/alfaDF9) for the processed Wolof ASR dataset
-- [CAYTU Robotics / Seydou Diallo](https://huggingface.co/CAYTU) for the whosper approach and inspiration
-- [OpenAI](https://github.com/openai/whisper) for the Whisper model
-- [Hugging Face](https://huggingface.co) for transformers and PEFT
+- [alfaDF9](https://huggingface.co/alfaDF9) — Wolof ASR dataset
+- [CAYTU / Seydou Diallo](https://huggingface.co/CAYTU) — whosper approach
+- [OpenAI](https://github.com/openai/whisper) — Whisper
