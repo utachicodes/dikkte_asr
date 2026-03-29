@@ -41,7 +41,7 @@ def merged_model():
 
 @pytest.fixture(scope="session")
 def silent_audio():
-    """30-second silent waveform at 16 kHz."""
+    """5-second silent waveform at 16 kHz."""
     return np.zeros(SAMPLE_RATE * 5, dtype=np.float32)
 
 

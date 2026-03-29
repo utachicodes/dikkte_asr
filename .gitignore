@@ -5,7 +5,7 @@ __pycache__/
 *.egg-info/
 dist/
 build/
-.claude/
+.claude*
 
 # Training checkpoints (large files)
 wolof-whisper-small-lora/checkpoint-*/

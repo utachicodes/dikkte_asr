@@ -39,9 +39,7 @@ def main():
     processor = WhisperProcessor.from_pretrained(BASE_MODEL)
     model = WhisperForConditionalGeneration.from_pretrained(BASE_MODEL)
 
-    # Force Wolof transcription settings
-    model.generation_config.language = "wo"
-    model.generation_config.task = "transcribe"
+    # Clear forced decoder IDs so the model learns freely
     model.generation_config.forced_decoder_ids = None
     model.config.forced_decoder_ids = None
 
